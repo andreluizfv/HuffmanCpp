@@ -1,13 +1,13 @@
 #include <bits\stdc++.h>
 using namespace std;
-
+using byte = unsigned char;
 class HuffmanTreeNode{
     HuffmanTreeNode* leftNode = NULL;
     HuffmanTreeNode* rightNode = NULL;
-    unsigned char value = 0;
+    byte value = 0;
     int frequency;
 
-    HuffmanTreeNode(unsigned char value, int frequency){
+    HuffmanTreeNode(byte value, int frequency){
         this->frequency = frequency;
         this->value = value;
     }
@@ -20,25 +20,30 @@ class HuffmanTreeNode{
     }
 
     HuffmanTreeNode( ifstream file){
-        map<unsigned char, int> frequencies;
+        map<byte, int> frequencies;
         vector<HuffmanTreeNode*> leafs;
-        char c;
+        byte c;
         while (!file.eof()) frequencies[c]++;
 
-        vector<pair<char, int>> freqList(frequencies.begin(), frequencies.end());
+        vector<pair<byte, int>> freqList(frequencies.begin(), frequencies.end());
         sort(freqList.begin(), freqList.end(), [](const auto& lhs, const auto& rhs) {
             return lhs.second < rhs.second;
         });
 
-        for (auto pair : freqList)
-        {
+        for (auto pair : freqList){
             leafs.push_back(new HuffmanTreeNode(pair.first, pair.second));
         }
 
-        TreeRecursion(leafs);
+        // TreeRecursion(leafs);
+    }
+    void print() {
+            if (leftNode != NULL) (*leftNode).print();
+            cout << "(" + to_string(value) + ", " + to_string(frequency) + ")";
+            if (rightNode != NULL) (*rightNode).print();
     }
 
-    void TreeRecursion(std::vector<HuffmanTreeNode*>& leafs)
+    private: 
+    void TreeRecursion(vector<HuffmanTreeNode*>& leafs)
     {
         while (leafs.size() > 1)
         {
@@ -59,10 +64,10 @@ class HuffmanTreeNode{
 
         if (!leafs.empty())
         {
-            m_byte = leafs.front()->m_byte;
-            m_frequency = leafs.front()->m_frequency;
-            m_left = leafs.front()->m_left;
-            m_right = leafs.front()->m_right;
+            this->leftNode = leafs.front()->leftNode;
+            this->rightNode = leafs.front()->rightNode;
+            this->frequency = leafs.front()->frequency;
+            this->value = leafs.front()->value;
         }
     }
 };
@@ -75,19 +80,30 @@ ifstream openFile(string path){
 
 
 int main(){
-    string lenaPath = "lena_ascii.pgm";
-    ifstream lenaFile = openFile(lenaPath);
-    unsigned char nextByte;
-    lenaFile >> nextByte;
-    cout <<  (int) nextByte;
-    lenaFile >> nextByte;
-    cout <<  (int) nextByte;
-    lenaFile.seekg(ios_base::beg);
-    lenaFile >> nextByte;
-    cout <<  (int) nextByte;
-    return 0;
+    // string lenaPath = "lena_ascii.pgm";
+    // ifstream lenaFile = openFile(lenaPath);
+    // byte nextByte;
+    // lenaFile >> nextByte;
+    // cout <<  (int) nextByte;
+    // lenaFile >> nextByte;
+    // cout <<  (int) nextByte;
+    // lenaFile.seekg(ios_base::beg);
+    // lenaFile >> nextByte;
+    // cout <<  (int) nextByte;
+    stringstream testStream;
+   vector<byte> testArray = {1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5};
+    for (auto b : testArray)
+        testStream << b;
+    
+    cout << to_string(sizeof(testArray)/sizeof(unsigned int)) << endl;
+    byte output;
+    while (!testStream.eof()){
+        testStream >> output;
+        cout << to_string(output) + " ";
+    }    
 
-    lenaFile.close();
+    // lenaFile.close();
+    return 0;
 }
 
 
