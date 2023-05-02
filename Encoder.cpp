@@ -2,6 +2,8 @@
 using namespace std;
 using byte = unsigned char;
 
+
+
 class CompactTreeNode{
     protected: 
         CompactTreeNode* leftNode = NULL;
@@ -36,7 +38,24 @@ class CompactTreeNode{
             if (leftNode != NULL) (*leftNode).savePreOrder(ofs);
             if (rightNode != NULL) (*rightNode).savePreOrder(ofs);
         }
-        // void buildTree(vector<pair<)
+        void buildTreeFromFile(ifstream& file){
+            short nOfNodes;
+            byte inputVal, inputOffVal;
+            vector<pair<byte,byte>> inOrder;
+            vector<pair<byte,byte>> preOrder;
+            unordered_map< short, int> pairToInIndex;
+            file.read((char*) &nOfNodes, sizeof(nOfNodes));
+            for( int i = 1; i <= 2*nOfNodes; i++){
+                file.read((char*) &inputVal, sizeof(inputVal));
+                file.read((char*) &inputOffVal, sizeof(inputOffVal));
+                i <= nOfNodes ? inOrder.push_back({inputVal,inputOffVal}) : preOrder.push_back({inputVal,inputOffVal});
+            }
+            cout << endl;
+            for(int i = 0; i < nOfNodes; i++){
+                pairToInIndex[(inOrder[i].first << 8) + inOrder[i].second] = i; 
+            }
+
+        }
 };
 __int16 CompactTreeNode::size = 0;
 
@@ -156,19 +175,24 @@ int main(){
     // string lenaPath = "lena_ascii.pgm";
     // ifstream lenaFile = openFile(lenaPath);
 
-    stringstream testStream;
-    vector<byte> testArray = {1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5};
-    for (auto b : testArray)
-       testStream << b;
-    HuffmanTreeNode testTree(testStream);
-    testTree.print();
-    CompactTreeNode* testCompact = testTree.getCompact();
-    cout << endl;
-    testCompact->printInOrder();
-    ofstream fileTree("tree.bin", ios::out | ios::binary);
-    testCompact->save(fileTree);
-    cout<<endl;
-    cout<<testCompact->size;
+    // stringstream testStream;
+    // vector<byte> testArray = {1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5};
+    // for (auto b : testArray)
+    //    testStream << b;
+    // HuffmanTreeNode testTree(testStream);
+    // testTree.print();
+    // CompactTreeNode* testCompact = testTree.getCompact();
+    // cout << endl;
+    // testCompact->printInOrder();
+    // ofstream fileTree("tree.bin", ios::out | ios::binary);
+    // testCompact->save(fileTree);
+    // fileTree.close();
+
+    ifstream rf("tree.bin", ios::in | ios::binary);
+    CompactTreeNode* testRecover = new CompactTreeNode(NULL, NULL, 0, 0);
+    testRecover->buildTreeFromFile(rf);
+    // cout<<endl;
+    // cout<<testCompact->size;
     return 0;
 }
 
