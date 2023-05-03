@@ -3,6 +3,12 @@ using namespace std;
 using byte = unsigned char;
 
 
+short pairByteToShort (pair<byte,byte> p){
+    return (((short) p.first) << 8) + p.second;
+}
+pair<byte,byte> shortToPair( short hash){
+    return {hash >> 8, hash & (byte) 0xff};
+}
 
 class CompactTreeNode{
     protected: 
@@ -10,6 +16,7 @@ class CompactTreeNode{
         CompactTreeNode* rightNode = NULL;
         byte value = 0;
         byte offValue = 0; //used to internal nodes also has an ID
+    
     public:
         static __int16 size;
         CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, byte value, byte offValue): leftNode(leftNode),
@@ -41,8 +48,7 @@ class CompactTreeNode{
         void buildTreeFromFile(ifstream& file){
             short nOfNodes;
             byte inputVal, inputOffVal;
-            vector<pair<byte,byte>> inOrder;
-            vector<pair<byte,byte>> preOrder;
+            vector<pair<byte,byte>> inOrder, preOrder;
             unordered_map< short, int> pairToInIndex;
             file.read((char*) &nOfNodes, sizeof(nOfNodes));
             for( int i = 1; i <= 2*nOfNodes; i++){
@@ -54,8 +60,23 @@ class CompactTreeNode{
             for(int i = 0; i < nOfNodes; i++){
                 pairToInIndex[(inOrder[i].first << 8) + inOrder[i].second] = i; 
             }
-
+            CompactTreeNode* result = buildTreeFromVectorsAndMap(inOrder, preOrder, pairToInIndex);
         }
+
+         CompactTreeNode* buildTreeFromVectorsAndMap(vector<pair<byte,byte>>& inOrder,vector<pair<byte,byte>>& preOrder,
+                                                     unordered_map< short, int>& pairToInIndex, int preIndex){
+            if(inOrder.size() == 1){
+                return new CompactTreeNode(NULL, NULL, inOrder[0].first, inOrder[0].second);
+            }
+            else{
+                auto root = preOrder.front();
+                preOrder.erase(preOrder.begin());
+                auto rootInOrder = inOrder.begin();
+                for (; rootInOrder != preOrder.end(); ++rootInOrder){
+                    if( (*rootInOrder) == root ) break;
+                }
+            }
+         }
 };
 __int16 CompactTreeNode::size = 0;
 
@@ -131,8 +152,6 @@ class HuffmanTreeNode{
         void TreeRecursion(vector<HuffmanTreeNode*>& leafs){
         while (leafs.size() > 1)
         {
-            if (leafs.size() == 3)
-                char numb = 'n';
             HuffmanTreeNode* left = leafs.front();
             leafs.erase(leafs.begin());
             HuffmanTreeNode* right = leafs.front();
@@ -175,24 +194,46 @@ int main(){
     // string lenaPath = "lena_ascii.pgm";
     // ifstream lenaFile = openFile(lenaPath);
 
-    // stringstream testStream;
-    // vector<byte> testArray = {1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5};
-    // for (auto b : testArray)
-    //    testStream << b;
-    // HuffmanTreeNode testTree(testStream);
+    stringstream testStream;
+    vector<byte> testArray = {1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5};
+    for (auto b : testArray)
+       testStream << b;
+    HuffmanTreeNode testTree(testStream);
     // testTree.print();
-    // CompactTreeNode* testCompact = testTree.getCompact();
+    CompactTreeNode* testCompact = testTree.getCompact();
     // cout << endl;
     // testCompact->printInOrder();
-    // ofstream fileTree("tree.bin", ios::out | ios::binary);
-    // testCompact->save(fileTree);
-    // fileTree.close();
-
-    ifstream rf("tree.bin", ios::in | ios::binary);
-    CompactTreeNode* testRecover = new CompactTreeNode(NULL, NULL, 0, 0);
-    testRecover->buildTreeFromFile(rf);
+    ofstream fileTree("tree.bin", ios::out | ios::binary);
+    testCompact->save(fileTree);
+    fileTree.close();
+    // lenaFile.close();
+    // ifstream rf("tree.bin", ios::in | ios::binary);
+    // CompactTreeNode* testRecover = new CompactTreeNode(NULL, NULL, 0, 0);
+    // testRecover->buildTreeFromFile(rf);
     // cout<<endl;
     // cout<<testCompact->size;
+
+
+    // test unsigned char to char and to unsigned char
+    // ofstream testFile("charConversionsByte.bin", ios::out | ios::binary);
+    // byte great = 129;
+    // testFile.write((char*) (&great), sizeof(byte) );
+    // testFile.close();
+    // ifstream readTestFile("charConversionsByte.bin", ios::in | ios::binary);
+    // byte result;
+    // char resultAsChar;
+    // readTestFile.read((char*) (&result), sizeof(byte));
+    // cout << to_string((int) result) <<endl;
+    // readTestFile.seekg(0);
+    // readTestFile.read((char*) (&resultAsChar), sizeof(byte));
+    // cout << to_string((int) resultAsChar) <<endl;
+
+    pair<byte, byte> testPair = {254,255};
+    short testHash = pairByteToShort(testPair);
+    cout << testHash << endl;
+    pair<byte,byte> testFromHash = shortToPair(testHash);
+    cout << to_string((int) testFromHash.first) << " " << to_string( (int) testFromHash.second ) << endl;
+
     return 0;
 }
 
