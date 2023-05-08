@@ -10,6 +10,14 @@ pair<byte,byte> shortToPair( short hash){
     return {hash >> 8, hash & (byte) 0xff};
 }
 
+streampos fileSize(ifstream& file ){
+    streampos fsize = 0;
+    fsize = file.tellg();
+    file.seekg( 0, ios::end );
+    fsize = file.tellg() - fsize;
+    return fsize;
+}
+
 class CompactTreeNode{
     protected: 
         CompactTreeNode* leftNode = NULL;
@@ -22,10 +30,18 @@ class CompactTreeNode{
         CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, byte value, byte offValue): leftNode(leftNode),
         rightNode(rightNode), value(value), offValue(offValue){}
 
+        CompactTreeNode(ifstream& file){
+            buildTreeFromFile(file);
+        }
         void printInOrder() {
             if (leftNode != NULL) (*leftNode).printInOrder();
-            cout <<  to_string(value) + "," +to_string(offValue) + " ";
+            cout << "(" + to_string(value) + "," +to_string(offValue) + ") ";
             if (rightNode != NULL) (*rightNode).printInOrder();
+        }
+        void printPreOrder() {
+            cout << "(" + to_string(value) + "," +to_string(offValue) + ") ";
+            if (leftNode != NULL) (*leftNode).printPreOrder();
+            if (rightNode != NULL) (*rightNode).printPreOrder();
         }
 
         void save(ofstream& ofs) {
@@ -49,7 +65,7 @@ class CompactTreeNode{
             short nOfNodes;
             byte inputVal, inputOffVal;
             vector<pair<byte,byte>> inOrder, preOrder;
-            unordered_map< short, int> pairToInIndex;
+            unordered_map< short, int> shortToInIndex;
             file.read((char*) &nOfNodes, sizeof(nOfNodes));
             for( int i = 1; i <= 2*nOfNodes; i++){
                 file.read((char*) &inputVal, sizeof(inputVal));
@@ -58,24 +74,35 @@ class CompactTreeNode{
             }
             cout << endl;
             for(int i = 0; i < nOfNodes; i++){
-                pairToInIndex[(inOrder[i].first << 8) + inOrder[i].second] = i; 
+                shortToInIndex[pairByteToShort(inOrder[i])] = i; 
             }
-            CompactTreeNode* result = buildTreeFromVectorsAndMap(inOrder, preOrder, pairToInIndex);
+            int preOrderIndex = 0;
+            CompactTreeNode* result = buildTreeFromVectorsAndMap(inOrder, preOrder, shortToInIndex, preOrderIndex);
+            this->leftNode = result->leftNode;
+            this->rightNode = result->rightNode;
+            this->value = result->value;
+            this->offValue = result->offValue;
         }
 
-         CompactTreeNode* buildTreeFromVectorsAndMap(vector<pair<byte,byte>>& inOrder,vector<pair<byte,byte>>& preOrder,
-                                                     unordered_map< short, int>& pairToInIndex, int preIndex){
-            if(inOrder.size() == 1){
-                return new CompactTreeNode(NULL, NULL, inOrder[0].first, inOrder[0].second);
+        CompactTreeNode* buildTreeFromVectorsAndMap(vector<pair<byte,byte>>& inOrder,vector<pair<byte,byte>>& preOrder,
+                                                     unordered_map< short, int>& pairToInIndex,
+                                                     int& preOrderIdx, int inOrderBegin = -1, int inOrderEnd = -1, bool firstInteraction = true){
+            if(firstInteraction){ // first interaction
+                inOrderBegin = 0;
+                inOrderEnd = inOrder.size() - 1;
             }
-            else{
-                auto root = preOrder.front();
-                preOrder.erase(preOrder.begin());
-                auto rootInOrder = inOrder.begin();
-                for (; rootInOrder != preOrder.end(); ++rootInOrder){
-                    if( (*rootInOrder) == root ) break;
-                }
+            if(inOrderBegin > inOrderEnd){
+                return NULL;
             }
+            auto newNode = new CompactTreeNode(NULL, NULL, preOrder[preOrderIdx].first, preOrder[preOrderIdx].second);
+            
+            int inOrderSecondPart = pairToInIndex[ pairByteToShort( preOrder[ preOrderIdx++])];
+            
+            newNode->leftNode = buildTreeFromVectorsAndMap(inOrder, preOrder, pairToInIndex,
+                                                           preOrderIdx, inOrderBegin, inOrderSecondPart -1, false);
+            newNode->rightNode = buildTreeFromVectorsAndMap(inOrder, preOrder, pairToInIndex,
+                                                            preOrderIdx, inOrderSecondPart + 1, inOrderEnd, false);
+            return newNode;                                            
          }
 };
 __int16 CompactTreeNode::size = 0;
@@ -85,7 +112,8 @@ class HuffmanTreeNode{
         HuffmanTreeNode* leftNode = NULL;
         HuffmanTreeNode* rightNode = NULL;
         byte value = 0;
-        static byte offValue;
+        byte offValue;
+        static byte noLeafNodes;
         int frequency = 0;
         static __int16 size;
     public: 
@@ -126,11 +154,7 @@ class HuffmanTreeNode{
                 compactRight = rightNode->getCompact();
             }
             CompactTreeNode* result = NULL;
-            if(rightNode == NULL && leftNode == NULL) result = new CompactTreeNode(compactLeft, compactRight, this->value, this->offValue);
-            else{
-                result = new CompactTreeNode(compactLeft, compactRight,this->value, this->offValue);
-                offValue++;
-            }
+            result = new CompactTreeNode(compactLeft, compactRight,this->value, this->offValue);
             result->size++;
             return result;
         }
@@ -138,6 +162,7 @@ class HuffmanTreeNode{
         HuffmanTreeNode(byte value, int frequency){
             this->frequency = frequency;
             this->value = value;
+            this->offValue = 0;
             size++;
         }
 
@@ -146,6 +171,7 @@ class HuffmanTreeNode{
             this->value = 0;
             this->leftNode = &left;
             this->rightNode = &right;
+            this->offValue = ++noLeafNodes;
             size++;
         }
 
@@ -180,7 +206,7 @@ class HuffmanTreeNode{
         }
     }
 };
-byte HuffmanTreeNode::offValue = 0;
+byte HuffmanTreeNode::noLeafNodes = 0;
 __int16 HuffmanTreeNode::size = 0;
 
 ifstream openFile(string path){
@@ -190,22 +216,38 @@ ifstream openFile(string path){
 }
 
 
+
+
 int main(){
     // string lenaPath = "lena_ascii.pgm";
     // ifstream lenaFile = openFile(lenaPath);
 
-    stringstream testStream;
-    vector<byte> testArray = {1, 2, 2, 2, 2, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5};
-    for (auto b : testArray)
-       testStream << b;
-    HuffmanTreeNode testTree(testStream);
+    ifstream inputFile("testArray.bin", ios::in | ios::binary);
+    HuffmanTreeNode fullTree(inputFile);
+    ofstream outputFile("compressedArray", ios::out | ios::binary);
+    CompactTreeNode* compactTree = fullTree.getCompact();
+    compactTree->save(outputFile);
+    inputFile.seekg(0);
+    while(!inputFile.eof()){
+        inputFile.
+    }
     // testTree.print();
-    CompactTreeNode* testCompact = testTree.getCompact();
-    // cout << endl;
+    // CompactTreeNode* testCompact = testTree.getCompact();
+    // cout<<"in order: \n";
     // testCompact->printInOrder();
-    ofstream fileTree("tree.bin", ios::out | ios::binary);
-    testCompact->save(fileTree);
-    fileTree.close();
+    // cout<<"pre order: \n";
+    // testCompact->printPreOrder();
+    // ofstream fileTree("tree.bin", ios::out | ios::binary);
+    // testCompact->save(fileTree);
+    // fileTree.close();
+
+    // ifstream fileRecover("tree.bin", ios::in | ios::binary);
+    // auto resRecover = new CompactTreeNode(fileRecover);
+    // cout<<"recovered in order: \n";
+    // resRecover->printInOrder();
+    // cout<<"recovered pre order: \n";
+    // resRecover->printPreOrder();
+
     // lenaFile.close();
     // ifstream rf("tree.bin", ios::in | ios::binary);
     // CompactTreeNode* testRecover = new CompactTreeNode(NULL, NULL, 0, 0);
@@ -228,11 +270,11 @@ int main(){
     // readTestFile.read((char*) (&resultAsChar), sizeof(byte));
     // cout << to_string((int) resultAsChar) <<endl;
 
-    pair<byte, byte> testPair = {254,255};
-    short testHash = pairByteToShort(testPair);
-    cout << testHash << endl;
-    pair<byte,byte> testFromHash = shortToPair(testHash);
-    cout << to_string((int) testFromHash.first) << " " << to_string( (int) testFromHash.second ) << endl;
+    // pair<byte, byte> testPair = {254,255};
+    // short testHash = pairByteToShort(testPair);
+    // cout << testHash << endl;
+    // pair<byte,byte> testFromHash = shortToPair(testHash);
+    // cout << to_string((int) testFromHash.first) << " " << to_string( (int) testFromHash.second ) << endl;
 
     return 0;
 }
