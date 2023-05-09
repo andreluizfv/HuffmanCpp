@@ -1,4 +1,5 @@
 #include <bits\stdc++.h>
+
 #include <filesystem>
 using namespace std;
 using mybyte = unsigned char;
@@ -223,7 +224,18 @@ int main(){
     ifstream inputFile2("testArray.bin", ios::binary);
     inputFile2.seekg(0, ios::end);
     int filesize = inputFile2.tellg();
+    inputFile2.close();
     cout << filesize;
+
+    ifstream fileRecover("tree.bin", ios::in | ios::binary);
+    auto resRecover = new CompactTreeNode(fileRecover);
+    cout<<"recovered in order: \n";
+    resRecover->printInOrder();
+    cout<<"recovered pre order: \n";
+    resRecover->printPreOrder();
+
+    encodeHuff(inputFile, resRecover, outputFile);
+
     //cout << to_string(std::filesystem::file_size("compressedArray", ec));
     // while(!inputFile.eof()){
     //     inputFile.
@@ -239,12 +251,6 @@ int main(){
     // testCompact->save(fileTree);
     // fileTree.close();
 
-    // ifstream fileRecover("tree.bin", ios::in | ios::binary);
-    // auto resRecover = new CompactTreeNode(fileRecover);
-    // cout<<"recovered in order: \n";
-    // resRecover->printInOrder();
-    // cout<<"recovered pre order: \n";
-    // resRecover->printPreOrder();
 
     // lenaFile.close();
     // ifstream rf("tree.bin", ios::in | ios::binary);
