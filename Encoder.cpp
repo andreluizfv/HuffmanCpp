@@ -1,33 +1,25 @@
 #include <bits\stdc++.h>
+#include <filesystem>
 using namespace std;
-using byte = unsigned char;
+using mybyte = unsigned char;
 
-
-short pairByteToShort (pair<byte,byte> p){
+short pairByteToShort (pair<mybyte,mybyte> p){
     return (((short) p.first) << 8) + p.second;
 }
-pair<byte,byte> shortToPair( short hash){
-    return {hash >> 8, hash & (byte) 0xff};
-}
-
-streampos fileSize(ifstream& file ){
-    streampos fsize = 0;
-    fsize = file.tellg();
-    file.seekg( 0, ios::end );
-    fsize = file.tellg() - fsize;
-    return fsize;
+pair<mybyte,mybyte> shortToPair( short hash){
+    return {hash >> 8, hash & (mybyte) 0xff};
 }
 
 class CompactTreeNode{
     protected: 
         CompactTreeNode* leftNode = NULL;
         CompactTreeNode* rightNode = NULL;
-        byte value = 0;
-        byte offValue = 0; //used to internal nodes also has an ID
+        mybyte value = 0;
+        mybyte offValue = 0; //used to internal nodes also has an ID
     
     public:
         static __int16 size;
-        CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, byte value, byte offValue): leftNode(leftNode),
+        CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, mybyte value, mybyte offValue): leftNode(leftNode),
         rightNode(rightNode), value(value), offValue(offValue){}
 
         CompactTreeNode(ifstream& file){
@@ -63,8 +55,8 @@ class CompactTreeNode{
         }
         void buildTreeFromFile(ifstream& file){
             short nOfNodes;
-            byte inputVal, inputOffVal;
-            vector<pair<byte,byte>> inOrder, preOrder;
+            mybyte inputVal, inputOffVal;
+            vector<pair<mybyte,mybyte>> inOrder, preOrder;
             unordered_map< short, int> shortToInIndex;
             file.read((char*) &nOfNodes, sizeof(nOfNodes));
             for( int i = 1; i <= 2*nOfNodes; i++){
@@ -84,7 +76,7 @@ class CompactTreeNode{
             this->offValue = result->offValue;
         }
 
-        CompactTreeNode* buildTreeFromVectorsAndMap(vector<pair<byte,byte>>& inOrder,vector<pair<byte,byte>>& preOrder,
+        CompactTreeNode* buildTreeFromVectorsAndMap(vector<pair<mybyte,mybyte>>& inOrder,vector<pair<mybyte,mybyte>>& preOrder,
                                                      unordered_map< short, int>& pairToInIndex,
                                                      int& preOrderIdx, int inOrderBegin = -1, int inOrderEnd = -1, bool firstInteraction = true){
             if(firstInteraction){ // first interaction
@@ -111,22 +103,22 @@ class HuffmanTreeNode{
     protected: 
         HuffmanTreeNode* leftNode = NULL;
         HuffmanTreeNode* rightNode = NULL;
-        byte value = 0;
-        byte offValue;
-        static byte noLeafNodes;
+        mybyte value = 0;
+        mybyte offValue;
+        static mybyte noLeafNodes;
         int frequency = 0;
         static __int16 size;
     public: 
 
         HuffmanTreeNode( istream& file){
-            map<byte, int> frequencies;
+            map<mybyte, int> frequencies;
             vector<HuffmanTreeNode*> leafs;
-            byte c;
+            mybyte c;
             while (!file.eof()){
                 file >> c;
                 frequencies[c]++;
             }
-            vector<pair<byte, int>> freqList(frequencies.begin(), frequencies.end());
+            vector<pair<mybyte, int>> freqList(frequencies.begin(), frequencies.end());
             sort(freqList.begin(), freqList.end(), [](const auto& lhs, const auto& rhs) {
                 return lhs.second < rhs.second;
             });
@@ -159,7 +151,7 @@ class HuffmanTreeNode{
             return result;
         }
     private: 
-        HuffmanTreeNode(byte value, int frequency){
+        HuffmanTreeNode(mybyte value, int frequency){
             this->frequency = frequency;
             this->value = value;
             this->offValue = 0;
@@ -206,7 +198,7 @@ class HuffmanTreeNode{
         }
     }
 };
-byte HuffmanTreeNode::noLeafNodes = 0;
+mybyte HuffmanTreeNode::noLeafNodes = 0;
 __int16 HuffmanTreeNode::size = 0;
 
 ifstream openFile(string path){
@@ -227,10 +219,16 @@ int main(){
     ofstream outputFile("compressedArray", ios::out | ios::binary);
     CompactTreeNode* compactTree = fullTree.getCompact();
     compactTree->save(outputFile);
-    inputFile.seekg(0);
-    while(!inputFile.eof()){
-        inputFile.
-    }
+
+    ifstream inputFile2("testArray.bin", ios::binary);
+    inputFile2.seekg(0, ios::end);
+    int filesize = inputFile2.tellg();
+    cout << filesize;
+    //cout << to_string(std::filesystem::file_size("compressedArray", ec));
+    // while(!inputFile.eof()){
+    //     inputFile.
+    // }
+    
     // testTree.print();
     // CompactTreeNode* testCompact = testTree.getCompact();
     // cout<<"in order: \n";
@@ -258,22 +256,22 @@ int main(){
 
     // test unsigned char to char and to unsigned char
     // ofstream testFile("charConversionsByte.bin", ios::out | ios::binary);
-    // byte great = 129;
-    // testFile.write((char*) (&great), sizeof(byte) );
+    // mybyte great = 129;
+    // testFile.write((char*) (&great), sizeof(mybyte) );
     // testFile.close();
     // ifstream readTestFile("charConversionsByte.bin", ios::in | ios::binary);
-    // byte result;
+    // mybyte result;
     // char resultAsChar;
-    // readTestFile.read((char*) (&result), sizeof(byte));
+    // readTestFile.read((char*) (&result), sizeof(mybyte));
     // cout << to_string((int) result) <<endl;
     // readTestFile.seekg(0);
-    // readTestFile.read((char*) (&resultAsChar), sizeof(byte));
+    // readTestFile.read((char*) (&resultAsChar), sizeof(mybyte));
     // cout << to_string((int) resultAsChar) <<endl;
 
-    // pair<byte, byte> testPair = {254,255};
+    // pair<mybyte, mybyte> testPair = {254,255};
     // short testHash = pairByteToShort(testPair);
     // cout << testHash << endl;
-    // pair<byte,byte> testFromHash = shortToPair(testHash);
+    // pair<mybyte,mybyte> testFromHash = shortToPair(testHash);
     // cout << to_string((int) testFromHash.first) << " " << to_string( (int) testFromHash.second ) << endl;
 
     return 0;
