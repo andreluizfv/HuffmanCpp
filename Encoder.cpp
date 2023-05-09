@@ -209,40 +209,47 @@ ifstream openFile(string path){
 }
 
 class BitBuffer {
-    ofstream& file; // Initialization skipped.
-    myByte buffer = 0;
-    unsigned count = 0;
+    public:
+        ofstream* file = NULL; // Initialization skipped.
+        myByte buffer = 0;
+        unsigned count = 0;
 
-    void writeStringByBit(string code, bool last) {
-        while(code.length() != 0){
-            buffer <<= 1;          // Make room for next bit.
-            char c = code[0];
-            code = code.substr(1, code.length());
+        BitBuffer(ofstream& file){
+            this->file = &file;
+        }
+        void writeStringByBit(string code, bool last) {
+            while(code.length() != 0){
+                buffer <<= 1;          // Make room for next bit.
+                char c = code[0];
+                code = code.substr(1, code.length());
 
-            if (c == '1') buffer |= 1; // Set if necessary.
-            count++;              // Remember we have added a bit.
-            if (count == 8) {
-                file.write((char*) (&buffer), sizeof(myByte) );
+                if (c == '1') buffer |= 1; // Set if necessary.
+                count++;              // Remember we have added a bit.
+                if (count == 8) {
+                    file->write((char*) (&buffer), sizeof(myByte) );
+                    buffer = 0;
+                    count = 0;
+                }
+            }
+            if (last){
+                for(; 8 - count != 0; count ++) buffer <<= 1;
+                file->write((char*) (&buffer), sizeof(myByte) );
                 buffer = 0;
                 count = 0;
             }
         }
-        if (last){
-            while( 8 - count != 0){
-                buffer <<= 1;
-                count ++;
-            }
-            file.write((char*) (&buffer), sizeof(myByte) );
-                buffer = 0;
-                count = 0;
-        }
-    }
 };
 
 
 
 int main(){
-
+    ofstream outputTestFile("testBitBuffer.bin", ios::out | ios::binary);
+    string test1 = "11";
+    string test2 = "010101";
+    string test3 = "0000000011";
+    string test4 = "10101";
+    BitBuffer* bitBuffer = new BitBuffer(outputTestFile);
+    bitBuffer->writeStringByBit(test1, true);
 
 
     // string lenaPath = "lena_ascii.pgm";
