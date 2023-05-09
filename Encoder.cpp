@@ -206,23 +206,56 @@ ifstream openFile(string path){
     return file;
 }
 
+class BitBuffer {
+    ofstream& file; // Initialization skipped.
+    myByte buffer = 0;
+    unsigned count = 0;
+
+    void writeStringByBit(string code, bool last) {
+        while(code.length() != 0){
+            buffer <<= 1;          // Make room for next bit.
+            char c = code[0];
+            code = code.substr(1, code.length());
+
+            if (c == '1') buffer |= 1; // Set if necessary.
+            count++;              // Remember we have added a bit.
+            if (count == 8) {
+                file.write((char*) (&buffer), sizeof(myByte) );
+                buffer = 0;
+                count = 0;
+            }
+        }
+        if (last){
+            while( 8 - count != 0){
+                buffer <<= 1;
+                count ++;
+            }
+            file.write((char*) (&buffer), sizeof(myByte) );
+                buffer = 0;
+                count = 0;
+        }
+    }
+};
 
 
 
 int main(){
+
+
+
     // string lenaPath = "lena_ascii.pgm";
     // ifstream lenaFile = openFile(lenaPath);
-    cout << "??? \n";
-    ifstream inputFile("testArray.bin", ios::in | ios::binary);
-    HuffmanTreeNode fullTree(inputFile);
-    ofstream outputFile("compressedArray", ios::out | ios::binary);
-    CompactTreeNode* compactTree = fullTree.getCompact();
-    compactTree->save(outputFile);
-    inputFile.seekg(0);
+    // cout << "??? \n";
+    // ifstream inputFile("testArray.bin", ios::in | ios::binary);
+    // HuffmanTreeNode fullTree(inputFile);
+    // ofstream outputFile("compressedArray", ios::out | ios::binary);
+    // CompactTreeNode* compactTree = fullTree.getCompact();
+    // compactTree->save(outputFile);
+    // inputFile.seekg(0);
 
-    ifstream inputFile2("testArray.bin", ios::in);
-    inputFile2.seekg(0, ios::end);
-    cout << to_string((int) inputFile2.tellg());
+    // ifstream inputFile2("testArray.bin", ios::in);
+    // inputFile2.seekg(0, ios::end);
+    // cout << to_string((int) inputFile2.tellg());
     // while(!inputFile.eof()){
     //     inputFile.
     // }
