@@ -1,5 +1,4 @@
 #include <bits\stdc++.h>
-
 #include <filesystem>
 using namespace std;
 using myByte = unsigned char;
@@ -12,14 +11,13 @@ pair<myByte,myByte> shortToPair( short hash){
 }
 
 class CompactTreeNode{
-    protected: 
+    public:
+        myByte value = 0;
+        myByte offValue = 0;
         CompactTreeNode* leftNode = NULL;
         CompactTreeNode* rightNode = NULL;
-        myByte value = 0;
-        myByte offValue = 0; //used to internal nodes also has an ID
-    
-    public:
         static __int16 size;
+
         CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, myByte value, myByte offValue): leftNode(leftNode),
         rightNode(rightNode), value(value), offValue(offValue){}
 
@@ -39,7 +37,7 @@ class CompactTreeNode{
 
         void save(ofstream& ofs) {
             ofs.write((char*)&size, sizeof(size));
-            saveInOrder( ofs);
+            saveInOrder(ofs);
             savePreOrder(ofs);
         }
         void saveInOrder(ofstream& ofs) {
@@ -54,6 +52,7 @@ class CompactTreeNode{
             if (leftNode != NULL) (*leftNode).savePreOrder(ofs);
             if (rightNode != NULL) (*rightNode).savePreOrder(ofs);
         }
+
         void buildTreeFromFile(ifstream& file){
             short nOfNodes;
             myByte inputVal, inputOffVal;
@@ -65,7 +64,6 @@ class CompactTreeNode{
                 file.read((char*) &inputOffVal, sizeof(inputOffVal));
                 i <= nOfNodes ? inOrder.push_back({inputVal,inputOffVal}) : preOrder.push_back({inputVal,inputOffVal});
             }
-            cout << endl;
             for(int i = 0; i < nOfNodes; i++){
                 shortToInIndex[pairByteToShort(inOrder[i])] = i; 
             }
@@ -76,7 +74,6 @@ class CompactTreeNode{
             this->value = result->value;
             this->offValue = result->offValue;
         }
-
         CompactTreeNode* buildTreeFromVectorsAndMap(vector<pair<myByte,myByte>>& inOrder,vector<pair<myByte,myByte>>& preOrder,
                                                      unordered_map< short, int>& pairToInIndex,
                                                      int& preOrderIdx, int inOrderBegin = -1, int inOrderEnd = -1, bool firstInteraction = true){
@@ -111,12 +108,12 @@ class HuffmanTreeNode{
         static __int16 size;
     public: 
 
-        HuffmanTreeNode( istream& file){
+        HuffmanTreeNode( ifstream& file){
             map<myByte, int> frequencies;
             vector<HuffmanTreeNode*> leafs;
             myByte c;
             while (!file.eof()){
-                file >> c;
+                file.read((char*) (&c), sizeof(c));;
                 frequencies[c]++;
             }
             vector<pair<myByte, int>> freqList(frequencies.begin(), frequencies.end());
@@ -164,40 +161,41 @@ class HuffmanTreeNode{
             this->value = 0;
             this->leftNode = &left;
             this->rightNode = &right;
-            this->offValue = ++noLeafNodes;
+            this->offValue = noLeafNodes++;
             size++;
         }
 
         void TreeRecursion(vector<HuffmanTreeNode*>& leafs){
-        while (leafs.size() > 1)
-        {
-            HuffmanTreeNode* left = leafs.front();
-            leafs.erase(leafs.begin());
-            HuffmanTreeNode* right = leafs.front();
-            leafs.erase(leafs.begin());
+            while (leafs.size() > 1)
+            {
+                HuffmanTreeNode* left = leafs.front();
+                leafs.erase(leafs.begin());
+                HuffmanTreeNode* right = leafs.front();
+                leafs.erase(leafs.begin());
 
-            HuffmanTreeNode* parent = new HuffmanTreeNode(*left, *right);
+                HuffmanTreeNode* parent = new HuffmanTreeNode(*left, *right);
 
-            for (auto it = leafs.begin(); it != leafs.end() + 1; ++it){
-                if(it == leafs.end()){
-                    leafs.insert(it, parent);
-                    break;
-                }
-                if ((*it)->frequency >= parent->frequency){
-                    leafs.insert(it, parent);
-                    break;
+                for (auto it = leafs.begin(); it != leafs.end() + 1; ++it){
+                    if(it == leafs.end()){
+                        leafs.insert(it, parent);
+                        break;
+                    }
+                    if ((*it)->frequency >= parent->frequency){
+                        leafs.insert(it, parent);
+                        break;
+                    }
                 }
             }
-        }
 
-        if (!leafs.empty())
-        {
-            this->leftNode = leafs.front()->leftNode;
-            this->rightNode = leafs.front()->rightNode;
-            this->frequency = leafs.front()->frequency;
-            this->value = leafs.front()->value;
+            if (!leafs.empty())
+            {
+                this->leftNode = leafs.front()->leftNode;
+                this->rightNode = leafs.front()->rightNode;
+                this->frequency = leafs.front()->frequency;
+                this->value = leafs.front()->value;
+                this->offValue = leafs.front()->offValue;
+            }
         }
-    }
 };
 myByte HuffmanTreeNode::noLeafNodes = 0;
 __int16 HuffmanTreeNode::size = 0;
@@ -231,98 +229,106 @@ class BitBuffer {
                     count = 0;
                 }
             }
-            if (last){
-                for(; 8 - count != 0; count ++) buffer <<= 1;
+            if (last && count != 0){
+                for(; count != 8; count ++) buffer <<= 1;
                 file->write((char*) (&buffer), sizeof(myByte) );
-                buffer = 0;
-                count = 0;
             }
         }
 };
 
+void DFSByteToPathSaver(CompactTreeNode* tree, map<myByte, string>& table, string path){
+    if(tree == NULL) return;
+    if(tree->leftNode == NULL && tree->rightNode == NULL){
+        table[tree->value] = path;
+        return;
+    }
+    DFSByteToPathSaver(tree->leftNode, table, path + "0");
+    DFSByteToPathSaver(tree->rightNode, table, path + "1");
+}
 
+map<myByte, string> byteToStringTable (CompactTreeNode* tree){
+    map<myByte, string> table;
+    DFSByteToPathSaver(tree, table, "");
+    return table;
+}
+
+void DFSPathToByteSaver(CompactTreeNode* tree, map<string, myByte>& table, string path){
+    if(tree == NULL) return;
+    if(tree->leftNode == NULL && tree->rightNode == NULL){
+        table[path] = tree->value;
+        return;
+    }
+    DFSPathToByteSaver(tree->leftNode, table, path + "0");
+    DFSPathToByteSaver(tree->rightNode, table, path + "1");
+}
+
+map<string, myByte> pathToByteTable (CompactTreeNode* tree){
+    map<string, myByte> table;
+    DFSPathToByteSaver(tree, table, "");
+    return table;
+}
+
+
+void encodeBytes(ofstream& outputFile,string inputPath, map<myByte,string> table){
+    ifstream inputFile(inputPath, ios::ate | ios::binary);
+    unsigned long int nOfBytes = inputFile.tellg();
+    cout << nOfBytes;
+    outputFile.write((char*) (&nOfBytes), sizeof(nOfBytes) );
+    BitBuffer buffer(outputFile);
+    myByte inputByte;
+    inputFile.seekg(0);
+    for(unsigned long int writtenBytes = 1; writtenBytes <= nOfBytes; writtenBytes++){
+        inputFile.read((char*) (&inputByte), sizeof(inputByte));
+        buffer.writeStringByBit(table[inputByte], (writtenBytes == nOfBytes) );
+    }
+    outputFile.close();
+}
+
+void decodeBytes(ifstream& inputFile,string outputPath, map<string, myByte> table){
+    ofstream outputFile(outputPath, ios::out | ios::binary);
+    unsigned long int nOfBytes;
+    inputFile.read((char*) (&nOfBytes), sizeof(nOfBytes) );
+    cout << "decoding" << endl;
+    cout << nOfBytes <<endl;
+    BitBuffer buffer(outputFile);
+    myByte inputByte, outputByte;
+    string inputBytesAsString = "", currentKeyString = "";
+    unsigned long int writtenBytes = 0;
+    
+    while(!inputFile.eof() && writtenBytes != nOfBytes){
+        if (inputBytesAsString == ""){
+            inputFile.read((char*) (&inputByte), sizeof(inputByte));
+            inputBytesAsString += bitset<8>(inputByte).to_string();
+        }
+        currentKeyString += inputBytesAsString[0];
+        inputBytesAsString = inputBytesAsString.substr(1, inputBytesAsString.length());
+        if(table.find(currentKeyString) != table.end()){
+            outputFile.write((char*) (&table[currentKeyString]), sizeof(myByte) );
+            writtenBytes++;
+            currentKeyString = "";
+        }
+    }
+    cout << to_string(writtenBytes) + " bytes were written\n";
+    inputFile.close();
+}
 
 int main(){
-    ofstream outputTestFile("testBitBuffer.bin", ios::out | ios::binary);
-    string test1 = "11";
-    string test2 = "010101";
-    string test3 = "0000000011";
-    string test4 = "10101";
-    BitBuffer* bitBuffer = new BitBuffer(outputTestFile);
-    bitBuffer->writeStringByBit(test1, true);
+    // encode lena
+    ifstream inputTestFile("lena_ascii.pgm", ios::in | ios::binary);
+    HuffmanTreeNode fullTree(inputTestFile);
+    CompactTreeNode* compactTree = fullTree.getCompact();
+    inputTestFile.close();
+    ofstream outputFile("lena_ascii.huff", ios::out | ios::binary);
+    compactTree->save(outputFile);
+    map<myByte,string> table = byteToStringTable(compactTree);
+    encodeBytes(outputFile, "lena_ascii.pgm", table);
 
-
-    // string lenaPath = "lena_ascii.pgm";
-    // ifstream lenaFile = openFile(lenaPath);
-    // cout << "??? \n";
-    // ifstream inputFile("testArray.bin", ios::in | ios::binary);
-    // HuffmanTreeNode fullTree(inputFile);
-    // ofstream outputFile("compressedArray", ios::out | ios::binary);
-    // CompactTreeNode* compactTree = fullTree.getCompact();
-    // compactTree->save(outputFile);
-    // inputFile.seekg(0);
-
-    // ifstream inputFile2("testArray.bin", ios::in);
-    // inputFile2.seekg(0, ios::end);
-    // cout << to_string((int) inputFile2.tellg());
-    // while(!inputFile.eof()){
-    //     inputFile.
-    // }
-    // testTree.print();
-    // CompactTreeNode* testCompact = testTree.getCompact();
-    // cout<<"in order: \n";
-    // testCompact->printInOrder();
-    // cout<<"pre order: \n";
-    // testCompact->printPreOrder();
-    // ofstream fileTree("tree.bin", ios::out | ios::binary);
-    // testCompact->save(fileTree);
-    // fileTree.close();
-
-
-    // lenaFile.close();
-    // ifstream rf("tree.bin", ios::in | ios::binary);
-    // CompactTreeNode* testRecover = new CompactTreeNode(NULL, NULL, 0, 0);
-    // testRecover->buildTreeFromFile(rf);
-    // cout<<endl;
-    // cout<<testCompact->size;
-
-
-    // test unsigned char to char and to unsigned char
-    // ofstream testFile("charConversionsByte.bin", ios::out | ios::binary);
-    // mybyte great = 129;
-    // testFile.write((char*) (&great), sizeof(mybyte) );
-    // testFile.close();
-    // ifstream readTestFile("charConversionsByte.bin", ios::in | ios::binary);
-    // mybyte result;
-    // char resultAsChar;
-    // readTestFile.read((char*) (&result), sizeof(mybyte));
-    // cout << to_string((int) result) <<endl;
-    // readTestFile.seekg(0);
-    // readTestFile.read((char*) (&resultAsChar), sizeof(mybyte));
-    // cout << to_string((int) resultAsChar) <<endl;
-
-    // pair<mybyte, mybyte> testPair = {254,255};
-    // short testHash = pairByteToShort(testPair);
-    // cout << testHash << endl;
-    // pair<mybyte,mybyte> testFromHash = shortToPair(testHash);
-    // myByte great = 129;
-    // testFile.write((char*) (&great), sizeof(myByte) );
-    // testFile.close();
-    // ifstream readTestFile("charConversionsByte.bin", ios::in | ios::binary);
-    // myByte result;
-    // char resultAsChar;
-    // readTestFile.read((char*) (&result), sizeof(myByte));
-    // cout << to_string((int) result) <<endl;
-    // readTestFile.seekg(0);
-    // readTestFile.read((char*) (&resultAsChar), sizeof(myByte));
-    // cout << to_string((int) resultAsChar) <<endl;
-
-    // pair<myByte, myByte> testPair = {254,255};
-    // short testHash = pairByteToShort(testPair);
-    // cout << testHash << endl;
-    // pair<myByte,myByte> testFromHash = shortToPair(testHash);
-    // cout << to_string((int) testFromHash.first) << " " << to_string( (int) testFromHash.second ) << endl;
-
+    //decide lena
+    ifstream rf("lena_ascii.huff", ios::in | ios::binary);
+    CompactTreeNode* testRecoverFullTree = new CompactTreeNode(NULL, NULL, 0, 0);
+    testRecoverFullTree->buildTreeFromFile(rf);
+    map<string, myByte> recoveredTable = pathToByteTable(testRecoverFullTree);
+    decodeBytes(rf, "recoveredLenaFile.bin", recoveredTable);
     return 0;
 }
 
