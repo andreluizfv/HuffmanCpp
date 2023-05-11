@@ -16,7 +16,7 @@ double meanSquareError(string path1, string path2){
     }
     inputFile1.close();
     inputFile2.close();
-    cout<<"total bytes in mse: " + to_string(totalBytes) + "\n";
+     cout<<"total bytes in mse: " + to_string(totalBytes) + "\n";
     return (result/(long double) totalBytes);
 }
 
@@ -44,15 +44,21 @@ double variancy(string path){
 
 }
 
-PSNR(long double mse){
+string PSNR(long double mse){
     long double r = 255; //for a byte
     cout << "mse: " + to_string(mse) + "\n";
-    return 10*log10(r*r/mse);
+    if (mse == 0){
+        cout <<"mse is 0: division by 0! \n";
+        return "PSNR = " + to_string(10*log10(r*r/mse));
+    }
+    return "PSNR = " + to_string(10*log10(r*r/mse));
 }
 
 
 int main(){
-    
+    cout<<"Lena image:\n";
+    cout << PSNR(meanSquareError("lena_ascii.huff.pgm", "lena_ascii.pgm")) <<endl;
+    cout <<"Baboon image:\n";
     cout << PSNR(meanSquareError("baboon_ascii.huff.pgm", "baboon_ascii.pgm")) <<endl;
 
     return 0;

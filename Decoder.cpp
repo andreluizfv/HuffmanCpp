@@ -37,24 +37,6 @@ class CompactTreeNode{
             if (rightNode != NULL) (*rightNode).printPreOrder();
         }
 
-        void save(ofstream& ofs) {
-            ofs.write((char*)&size, sizeof(size));
-            saveInOrder(ofs);
-            savePreOrder(ofs);
-        }
-        void saveInOrder(ofstream& ofs) {
-            if (leftNode != NULL) (*leftNode).saveInOrder(ofs);
-            ofs.write((char*)&this->value, sizeof(this->value));
-            ofs.write((char*)&this->offValue, sizeof(this->offValue));
-            if (rightNode != NULL) (*rightNode).saveInOrder(ofs);
-        }
-        void savePreOrder(ofstream& ofs) {
-            ofs.write((char*)&this->value, sizeof(this->value));
-            ofs.write((char*)&this->offValue, sizeof(this->offValue));
-            if (leftNode != NULL) (*leftNode).savePreOrder(ofs);
-            if (rightNode != NULL) (*rightNode).savePreOrder(ofs);
-        }
-
         void buildTreeFromFile(ifstream& file){
             short nOfNodes;
             myByte inputVal, inputOffVal;
@@ -117,6 +99,7 @@ map<string, myByte> pathToByteTable (CompactTreeNode* tree){
 
 void decodeBytes(ifstream& inputFile,string outputPath, map<string, myByte> table){
     ofstream outputFile(outputPath, ios::out | ios::binary);
+    if (!outputFile.is_open()) throw runtime_error("Error opening file");
     unsigned long int nOfBytes;
 
     inputFile.read((char*) (&nOfBytes), sizeof(nOfBytes) );
@@ -143,14 +126,16 @@ void decodeBytes(ifstream& inputFile,string outputPath, map<string, myByte> tabl
 }
 
 int main(){
-    //decode lena
+    //  decode lena
     ifstream rf("lena_ascii.huff", ios::in | ios::binary);
+    if (!rf.is_open()) throw runtime_error("Error opening file");
     CompactTreeNode* testRecoverFullTree = new CompactTreeNode(NULL, NULL, 0, 0);
     testRecoverFullTree->buildTreeFromFile(rf);
     map<string, myByte> recoveredTable = pathToByteTable(testRecoverFullTree);
     decodeBytes(rf, "lena_ascii.huff.pgm", recoveredTable);
-    //decode baboon
+    //  decode baboon
     ifstream rf2("baboon_ascii.huff", ios::in | ios::binary);
+    if (!rf2.is_open()) throw runtime_error("Error opening file");
     CompactTreeNode* testRecoverFullTree2 = new CompactTreeNode(NULL, NULL, 0, 0);
     testRecoverFullTree2->buildTreeFromFile(rf2);
     map<string, myByte> recoveredTable2 = pathToByteTable(testRecoverFullTree2);

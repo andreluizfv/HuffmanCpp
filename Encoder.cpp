@@ -99,7 +99,7 @@ class HuffmanTreeNode{
     protected: 
         HuffmanTreeNode* leftNode = NULL; // left Child
         HuffmanTreeNode* rightNode = NULL; // right child
-        myByte value = 0; // just leafs has it as no-zero
+        myByte value = 0; // just leafs has it has usage
         myByte offValue; // for leafs it is zero
         static myByte noLeafNodes; // used for counting and naming internal nodes
         int frequency = 0; //frequency that value has. Just has meaning for leafs
@@ -161,6 +161,9 @@ class HuffmanTreeNode{
             return result;
         }
     private: 
+        /*
+            Used to generate leaf nodes
+        */
         HuffmanTreeNode(myByte value, int frequency){
             this->frequency = frequency;
             this->value = value;
@@ -168,6 +171,9 @@ class HuffmanTreeNode{
             size++;
         }
 
+        /*
+            Used to generate one Internal Node from its children
+        */
         HuffmanTreeNode(HuffmanTreeNode& left, HuffmanTreeNode& right){
             this->frequency = left.frequency + right.frequency;
             this->value = 0;
@@ -177,16 +183,16 @@ class HuffmanTreeNode{
             size++;
         }
 
+        /*
+            Used to generate all internal nodes
+        */
         void TreeRecursion(vector<HuffmanTreeNode*>& leafs){
-            while (leafs.size() > 1)
-            {
+            while (leafs.size() > 1){
                 HuffmanTreeNode* left = leafs.front();
                 leafs.erase(leafs.begin());
                 HuffmanTreeNode* right = leafs.front();
                 leafs.erase(leafs.begin());
-
                 HuffmanTreeNode* parent = new HuffmanTreeNode(*left, *right);
-
                 for (auto it = leafs.begin(); it != leafs.end() + 1; ++it){
                     if(it == leafs.end()){
                         leafs.insert(it, parent);
@@ -198,9 +204,7 @@ class HuffmanTreeNode{
                     }
                 }
             }
-
-            if (!leafs.empty())
-            {
+            if (!leafs.empty()){
                 this->leftNode = leafs.front()->leftNode;
                 this->rightNode = leafs.front()->rightNode;
                 this->frequency = leafs.front()->frequency;
@@ -212,21 +216,29 @@ class HuffmanTreeNode{
 myByte HuffmanTreeNode::noLeafNodes = 0;
 __int16 HuffmanTreeNode::size = 0;
 
-ifstream openFile(string path){
-    ifstream file(path, ios::binary);
-    if (!file.is_open()) throw runtime_error("Error opening file");
-    return file;
-}
 
+/*
+    Used to insert bit's in a file
+*/
 class BitBuffer {
     public:
-        ofstream* file = NULL; // Initialization skipped.
-        myByte buffer = 0;
-        unsigned count = 0;
+        ofstream* file = NULL; // file to write bits
+        myByte buffer = 0; // stores bits to write
+        unsigned count = 0; // stores the number of bits stored in buffer
 
+        /**
+         *   @param {outputFile} file - where bits will be written 
+         */
         BitBuffer(ofstream& file){
             this->file = &file;
         }
+        /**
+         * Write a string of 0's and 1's as bit's 
+         * 
+         * @param {string} code - bit string to be written
+         * @param {bool} last - true if it is the last string to be written in that file
+         * 
+         */ 
         void writeStringByBit(string code, bool last) {
             while(code.length() != 0){
                 buffer <<= 1;          // Make room for next bit.
@@ -247,7 +259,13 @@ class BitBuffer {
             }
         }
 };
-
+/**
+ *  Auxiliar function to get save path to each leaf
+ * 
+ * @param {map} table - map to store
+ * @param {string} path - path to current node
+ * @param {node} tree - node to interate
+*/
 void DFSByteToPathSaver(CompactTreeNode* tree, map<myByte, string>& table, string path){
     if(tree == NULL) return;
     if(tree->leftNode == NULL && tree->rightNode == NULL){
@@ -257,7 +275,13 @@ void DFSByteToPathSaver(CompactTreeNode* tree, map<myByte, string>& table, strin
     DFSByteToPathSaver(tree->leftNode, table, path + "0");
     DFSByteToPathSaver(tree->rightNode, table, path + "1");
 }
-
+/**
+ * Used to get byte -> path table used in encoding
+ * 
+ * @param {node} tree - root of the Tree
+ * 
+ * @return {map} byte -> path table
+ */
 map<myByte, string> byteToStringTable (CompactTreeNode* tree){
     map<myByte, string> table;
     DFSByteToPathSaver(tree, table, "");
@@ -266,6 +290,7 @@ map<myByte, string> byteToStringTable (CompactTreeNode* tree){
 
 void encodeBytes(ofstream& outputFile,string inputPath, map<myByte,string> table){
     ifstream inputFile(inputPath, ios::ate | ios::binary);
+    if (!inputFile.is_open()) throw runtime_error("Error opening file");
     unsigned long int nOfBytes = inputFile.tellg();
     outputFile.write((char*) (&nOfBytes), sizeof(nOfBytes) );
     BitBuffer buffer(outputFile);
@@ -297,20 +322,25 @@ string getAverageLength(map<myByte,string> table, map<myByte, int> frequencies){
 int main(){
     // encode lena
     ifstream inputFile("lena_ascii.pgm", ios::in | ios::binary);
+    if (!inputFile.is_open()) throw runtime_error("Error opening file");
     HuffmanTreeNode fullTree(inputFile);
     CompactTreeNode* compactTree = fullTree.getCompact();
     inputFile.close();
     ofstream outputFile("lena_ascii.huff", ios::out | ios::binary);
+    if (!outputFile.is_open()) throw runtime_error("Error opening file");
     compactTree->save(outputFile);
     map<myByte,string> table = byteToStringTable(compactTree);
     encodeBytes(outputFile, "lena_ascii.pgm", table);
     cout << "lena image average huffman code length: " + getAverageLength(table, fullTree.frequencies) + "\n";
+
     // encode baboon
-    ifstream inputTestFile2("baboon_ascii.pgm", ios::in | ios::binary);
-    HuffmanTreeNode fullTree2(inputTestFile2);
+    ifstream inputFile2("baboon_ascii.pgm", ios::in | ios::binary);
+    if (!inputFile2.is_open()) throw runtime_error("Error opening file");
+    HuffmanTreeNode fullTree2(inputFile2);
     CompactTreeNode* compactTree2 = fullTree2.getCompact();
-    inputTestFile2.close();
+    inputFile2.close();
     ofstream outputFile2("baboon_ascii.huff", ios::out | ios::binary);
+    if (!outputFile2.is_open()) throw runtime_error("Error opening file");
     compactTree2->save(outputFile2);
     map<myByte,string> table2 = byteToStringTable(compactTree2);
     encodeBytes(outputFile2, "baboon_ascii.pgm", table2);
