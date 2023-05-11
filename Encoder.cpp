@@ -39,6 +39,7 @@ class CompactTreeNode{
             ofs.write((char*)&size, sizeof(size));
             saveInOrder(ofs);
             savePreOrder(ofs);
+            size = 0; // reset to encode another file
         }
         void saveInOrder(ofstream& ofs) {
             if (leftNode != NULL) (*leftNode).saveInOrder(ofs);
@@ -106,10 +107,12 @@ class HuffmanTreeNode{
         static myByte noLeafNodes;
         int frequency = 0;
         static __int16 size;
+
     public: 
+        map<myByte, int> frequencies;
 
         HuffmanTreeNode( ifstream& file){
-            map<myByte, int> frequencies;
+            refresh();
             vector<HuffmanTreeNode*> leafs;
             myByte c;
             while (!file.eof()){
@@ -133,7 +136,10 @@ class HuffmanTreeNode{
             cout << "(" + to_string(value)+ "," + to_string(frequency) + ")";
             if (rightNode != NULL) (*rightNode).print();
         }
-
+        void refresh(){ // reset to encode another file
+            noLeafNodes = 0; 
+            size = 0;
+        }
         CompactTreeNode* getCompact(){
             CompactTreeNode* compactLeft = NULL;
             CompactTreeNode* compactRight = NULL;
@@ -272,7 +278,6 @@ map<string, myByte> pathToByteTable (CompactTreeNode* tree){
 void encodeBytes(ofstream& outputFile,string inputPath, map<myByte,string> table){
     ifstream inputFile(inputPath, ios::ate | ios::binary);
     unsigned long int nOfBytes = inputFile.tellg();
-    cout << nOfBytes;
     outputFile.write((char*) (&nOfBytes), sizeof(nOfBytes) );
     BitBuffer buffer(outputFile);
     myByte inputByte;
@@ -282,14 +287,15 @@ void encodeBytes(ofstream& outputFile,string inputPath, map<myByte,string> table
         buffer.writeStringByBit(table[inputByte], (writtenBytes == nOfBytes) );
     }
     outputFile.close();
+    inputFile.close();
 }
 
 void decodeBytes(ifstream& inputFile,string outputPath, map<string, myByte> table){
     ofstream outputFile(outputPath, ios::out | ios::binary);
     unsigned long int nOfBytes;
     inputFile.read((char*) (&nOfBytes), sizeof(nOfBytes) );
-    cout << "decoding" << endl;
-    cout << nOfBytes <<endl;
+    cout << "decoding ";
+    cout << to_string(nOfBytes) + " bytes" <<endl;
     BitBuffer buffer(outputFile);
     myByte inputByte, outputByte;
     string inputBytesAsString = "", currentKeyString = "";
@@ -312,23 +318,42 @@ void decodeBytes(ifstream& inputFile,string outputPath, map<string, myByte> tabl
     inputFile.close();
 }
 
+string getAverageLength(map<myByte,string> table, map<myByte, int> frequencies){
+    long double average = 0, totalFrequencies = 0;
+    if(table.size() == 0){
+        cout << 0;
+        return "0";
+    }
+    for(auto x : table){
+        average += ((double) x.second.length())*frequencies[x.first];
+        totalFrequencies += frequencies[x.first];
+    }
+    average /= totalFrequencies;
+    return to_string(average);
+}
+
 int main(){
     // encode lena
-    ifstream inputTestFile("lena_ascii.pgm", ios::in | ios::binary);
-    HuffmanTreeNode fullTree(inputTestFile);
+    ifstream inputFile("lena_ascii.pgm", ios::in | ios::binary);
+    HuffmanTreeNode fullTree(inputFile);
     CompactTreeNode* compactTree = fullTree.getCompact();
-    inputTestFile.close();
+    inputFile.close();
     ofstream outputFile("lena_ascii.huff", ios::out | ios::binary);
     compactTree->save(outputFile);
     map<myByte,string> table = byteToStringTable(compactTree);
     encodeBytes(outputFile, "lena_ascii.pgm", table);
+    cout << "lena image average huffman code length: " + getAverageLength(table, fullTree.frequencies) + "\n";
+    // encode baboon
+    ifstream inputTestFile2("baboon_ascii.pgm", ios::in | ios::binary);
+    HuffmanTreeNode fullTree2(inputTestFile2);
+    CompactTreeNode* compactTree2 = fullTree2.getCompact();
+    inputTestFile2.close();
+    ofstream outputFile2("baboon_ascii.huff", ios::out | ios::binary);
+    compactTree2->save(outputFile2);
+    map<myByte,string> table2 = byteToStringTable(compactTree2);
+    encodeBytes(outputFile2, "baboon_ascii.pgm", table2);
+    cout << "baboon image average huffman code length: " + getAverageLength(table2, fullTree2.frequencies) + "\n";
 
-    //decide lena
-    ifstream rf("lena_ascii.huff", ios::in | ios::binary);
-    CompactTreeNode* testRecoverFullTree = new CompactTreeNode(NULL, NULL, 0, 0);
-    testRecoverFullTree->buildTreeFromFile(rf);
-    map<string, myByte> recoveredTable = pathToByteTable(testRecoverFullTree);
-    decodeBytes(rf, "recoveredLenaFile.bin", recoveredTable);
     return 0;
 }
 
