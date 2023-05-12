@@ -1,4 +1,8 @@
-#include <bits/stdc++.h>
+#include<iostream>
+#include<vector>
+#include<string>
+#include<fstream>
+
 using namespace std;
 using myByte = unsigned char ;
 

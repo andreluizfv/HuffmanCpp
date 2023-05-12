@@ -34,7 +34,7 @@ class CompactTreeNode{
         myByte offValue = 0; // used to each node be different. For leafs is 0
         CompactTreeNode* leftNode = NULL; // left Child
         CompactTreeNode* rightNode = NULL; // right Child
-        static __int16 size; // static size to numerate internal nodes
+        static int16_t size; // static size to numerate internal nodes
 
         /*
             Default constructor
@@ -90,7 +90,7 @@ class CompactTreeNode{
             }
 
 };
-__int16 CompactTreeNode::size = 0;
+int16_t CompactTreeNode::size = 0;
 
 /*
     Used tu build trees from original files and create Compacted Tree
@@ -103,7 +103,7 @@ class HuffmanTreeNode{
         myByte offValue; // for leafs it is zero
         static myByte noLeafNodes; // used for counting and naming internal nodes
         int frequency = 0; //frequency that value has. Just has meaning for leafs
-        static __int16 size; //size of the tree
+        static int16_t size; //size of the tree
 
     public: 
         map<myByte, int> frequencies; // It has byte frequencies to build and to use compute average length code later. It
@@ -214,7 +214,7 @@ class HuffmanTreeNode{
         }
 };
 myByte HuffmanTreeNode::noLeafNodes = 0;
-__int16 HuffmanTreeNode::size = 0;
+int16_t HuffmanTreeNode::size = 0;
 
 
 /*

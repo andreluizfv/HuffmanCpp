@@ -18,7 +18,7 @@ class CompactTreeNode{
         myByte offValue = 0;
         CompactTreeNode* leftNode = NULL;
         CompactTreeNode* rightNode = NULL;
-        static __int16 size;
+        static int16_t size;
 
         CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, myByte value, myByte offValue): leftNode(leftNode),
         rightNode(rightNode), value(value), offValue(offValue){}
@@ -79,7 +79,7 @@ class CompactTreeNode{
             return newNode;                                            
          }
 };
-__int16 CompactTreeNode::size = 0;
+int16_t CompactTreeNode::size = 0;
 
 void DFSPathToByteSaver(CompactTreeNode* tree, map<string, myByte>& table, string path){
     if(tree == NULL) return;
