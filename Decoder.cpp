@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <bitset>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <map>
@@ -125,19 +126,47 @@ void decodeBytes(ifstream& inputFile,string outputPath, map<string, myByte> tabl
     outputFile.close();
 }
 
+string myByte_toString(myByte byte){
+    string result = "";
+    for(int i = 0; i < 8; i++){
+        (byte & 0x80) ? result += "1" : result += "0";
+        byte <<= 1;
+    }
+    return result;
+}
+
+map<string, myByte> recoverInvertedTable(ifstream& file){
+    map<string, myByte> table;
+    int16_t size, numberOfBytes;
+    file.read((char*)&size, sizeof(size));
+    myByte nOfBits, value, inputString;
+    string key = "";
+    for(; size > 0; size --){
+        file.read((char*)&nOfBits, sizeof(nOfBits));
+        numberOfBytes = ceil( nOfBits / 8.0);
+        for(; numberOfBytes > 0 ; numberOfBytes --){
+            file.read((char*)&inputString, sizeof(inputString));
+            key += myByte_toString(inputString);
+        }
+        key = key.substr(0,nOfBits);
+        file.read((char*)&value, sizeof(value));
+        table[key] = value;
+        key = "";
+    }
+    return table;
+}
+
 int main(){
     //  decode lena
     ifstream rf("lena_ascii.huff", ios::in | ios::binary);
     if (!rf.is_open()) throw runtime_error("Error opening file");
-    CompactTreeNode* testRecoverFullTree = new CompactTreeNode(NULL, NULL, 0, 0);
-    testRecoverFullTree->buildTreeFromFile(rf);
-    map<string, myByte> recoveredTable = pathToByteTable(testRecoverFullTree);
+    map<string, myByte> recoveredTable = recoverInvertedTable(rf);
     decodeBytes(rf, "lena_ascii.huff.pgm", recoveredTable);
-    //  decode baboon
-    ifstream rf2("baboon_ascii.huff", ios::in | ios::binary);
-    if (!rf2.is_open()) throw runtime_error("Error opening file");
-    CompactTreeNode* testRecoverFullTree2 = new CompactTreeNode(NULL, NULL, 0, 0);
-    testRecoverFullTree2->buildTreeFromFile(rf2);
-    map<string, myByte> recoveredTable2 = pathToByteTable(testRecoverFullTree2);
-    decodeBytes(rf2, "baboon_ascii.huff.pgm", recoveredTable2);
+    // //  decode baboon
+    // ifstream rf2("baboon_ascii.huff", ios::in | ios::binary);
+    // if (!rf2.is_open()) throw runtime_error("Error opening file");
+    // CompactTreeNode* testRecoverFullTree2 = new CompactTreeNode(NULL, NULL, 0, 0);
+    // testRecoverFullTree2->buildTreeFromFile(rf2);
+    // map<string, myByte> recoveredTable2 = pathToByteTable(testRecoverFullTree2);
+    // decodeBytes(rf2, "baboon_ascii.huff.pgm", recoveredTable2);
 }

@@ -5,6 +5,7 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <cmath>
 using namespace std;
 using myByte = unsigned char;
 
@@ -97,15 +98,15 @@ int16_t CompactTreeNode::size = 0;
 */
 class HuffmanTreeNode{
     protected: 
-        HuffmanTreeNode* leftNode = NULL; // left Child
-        HuffmanTreeNode* rightNode = NULL; // right child
-        myByte value = 0; // just leafs has it has usage
         myByte offValue; // for leafs it is zero
         static myByte noLeafNodes; // used for counting and naming internal nodes
         int frequency = 0; //frequency that value has. Just has meaning for leafs
         static int16_t size; //size of the tree
 
     public: 
+        myByte value = 0; // just leafs has it has usage
+        HuffmanTreeNode* leftNode = NULL; // left Child
+        HuffmanTreeNode* rightNode = NULL; // right child
         map<myByte, int> frequencies; // It has byte frequencies to build and to use compute average length code later. It
         /*
         Construct the tree using the file to be compressed
@@ -280,7 +281,7 @@ class BitBuffer {
         BitBuffer(ofstream& file){
             this->file = &file;
         }
-        refresh(){
+        void refresh(){
             this->buffer = 0;
             this->count = 0;
         }
@@ -307,7 +308,8 @@ class BitBuffer {
             }
             if (last && count != 0){
                 for(; count != 8; count ++) buffer <<= 1;
-                file->write((char*) (&buffer), sizeof(myByte) );
+                file->write((char*) (&buffer), sizeof(myByte));
+                this->refresh();
             }
         }
 };
@@ -318,7 +320,7 @@ class BitBuffer {
  * @param {string} path - path to current node
  * @param {node} tree - node to interate
 */
-void DFSByteToPathSaver(CompactTreeNode* tree, map<myByte, string>& table, string path){
+void DFSByteToPathSaver(HuffmanTreeNode* tree, map<myByte, string>& table, string path){
     if(tree == NULL) return;
     if(tree->leftNode == NULL && tree->rightNode == NULL){
         table[tree->value] = path;
@@ -334,7 +336,7 @@ void DFSByteToPathSaver(CompactTreeNode* tree, map<myByte, string>& table, strin
  * 
  * @return {map} byte -> path table
  */
-map<myByte, string> byteToStringTable (CompactTreeNode* tree){
+map<myByte, string> byteToStringTable (HuffmanTreeNode* tree){
     map<myByte, string> table;
     DFSByteToPathSaver(tree, table, "");
     return table;
@@ -358,24 +360,49 @@ void encodeBytes(ofstream& outputFile,string inputPath, map<myByte,string> table
 
 map<string, myByte> invertTable(map<myByte, string> table){
     map<string, myByte> invertedTable;
-    for(auto x : table) invertTable[x.second] = x.first;
+    for(auto x : table) invertedTable[x.second] = x.first;
     return invertedTable;
 }
 
 void saveInvertedTable(ofstream& file, map<string, myByte> table){
     int16_t size = table.size();
-    ofs.write((char*)&size, sizeof(size));
-    BitBuffer bitBuffer(file);
+    file.write((char*)&size, sizeof(size));
+    BitBuffer buffer(file);
+    myByte nOfBits;
     for (auto x : table){
-        writeStringInFile(file, x.first, bitBuffer);
-        ofs.write((char*)&x.second, sizeof(x.second));
+        nOfBits = x.first.length();
+        file.write((char*)&nOfBits, sizeof(nOfBits));
+        buffer.writeStringByBit(x.first,true);
+        file.write((char*)&x.second, sizeof(x.second));
     }
 }
-
-void writeStringInFile(file, x.first, bitBuffer)
-
-void writeStringInFile(ofstream& file, string str, BitBuffer buffer){
-    my
+string myByte_toString(myByte byte){
+    string result = "";
+    for(int i = 0; i < 8; i++){
+        (byte & 0x80) ? result += "1" : result += "0";
+        byte <<= 1;
+    }
+    return result;
+}
+map<string, myByte> recoverInvertedTable(ifstream& file){
+    map<string, myByte> table;
+    int16_t size, numberOfBytes;
+    file.read((char*)&size, sizeof(size));
+    myByte nOfBits, value, inputString;
+    string key = "";
+    for(; size > 0; size --){
+        file.read((char*)&nOfBits, sizeof(nOfBits));
+        numberOfBytes = ceil( nOfBits / 8.0);
+        for(; numberOfBytes > 0 ; numberOfBytes --){
+            file.read((char*)&inputString, sizeof(inputString));
+            key += myByte_toString(inputString);
+        }
+        key = key.substr(0,nOfBits);
+        file.read((char*)&value, sizeof(value));
+        table[key] = value;
+        key = "";
+    }
+    return table;
 }
 
 string getAverageLength(map<myByte,string> table, map<myByte, int> frequencies){
@@ -396,28 +423,20 @@ string getAverageLength(map<myByte,string> table, map<myByte, int> frequencies){
 
 int main(){
 
-    ifstream inputFile("testArray.bin", ios::in | ios::binary);
+    // encode lena
+    ifstream inputFile("lena_ascii.pgm", ios::in | ios::binary);
     if (!inputFile.is_open()) throw runtime_error("Error opening file");
     HuffmanTreeNode fullTree(inputFile);
-    CompactTreeNode* compactTree = fullTree.getCompact();
+    // CompactTreeNode* compactTree = fullTree.getCompact();
     inputFile.close();
     ofstream outputFile("lena_ascii.huff", ios::out | ios::binary);
     if (!outputFile.is_open()) throw runtime_error("Error opening file");
-    compactTree->save(outputFile);
-
-    // final routine
-    // // encode lena
-    // ifstream inputFile("lena_ascii.pgm", ios::in | ios::binary);
-    // if (!inputFile.is_open()) throw runtime_error("Error opening file");
-    // HuffmanTreeNode fullTree(inputFile);
-    // CompactTreeNode* compactTree = fullTree.getCompact();
-    // inputFile.close();
-    // ofstream outputFile("lena_ascii.huff", ios::out | ios::binary);
-    // if (!outputFile.is_open()) throw runtime_error("Error opening file");
     // compactTree->save(outputFile);
-    // map<myByte,string> table = byteToStringTable(compactTree);
-    // encodeBytes(outputFile, "lena_ascii.pgm", table);
-    // cout << "lena image average huffman code length: " + getAverageLength(table, fullTree.frequencies) + "\n";
+    map<myByte,string> table = byteToStringTable(&fullTree);
+    map<string, myByte> invertedTable = invertTable(table);
+    saveInvertedTable(outputFile, invertedTable);
+    encodeBytes(outputFile, "lena_ascii.pgm", table);
+    cout << "lena image average huffman code length: " + getAverageLength(table, fullTree.frequencies) + "\n";
 
     // // encode baboon
     // ifstream inputFile2("baboon_ascii.pgm", ios::in | ios::binary);
