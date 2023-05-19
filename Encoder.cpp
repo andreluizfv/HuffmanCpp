@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <bitset>
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <cmath>
 using namespace std;
 using myByte = unsigned char;
 
@@ -24,74 +24,6 @@ short pairByteToShort (pair<myByte,myByte> p){
 pair<myByte,myByte> shortToPair( short hash){
     return {hash >> 8, hash & (myByte) 0xff};
 }
-
-
-/*
-    Used to save compressed trees and recover them.
-*/
-class CompactTreeNode{
-    public:
-        myByte value = 0; // actual data, just leafs have it
-        myByte offValue = 0; // used to each node be different. For leafs is 0
-        CompactTreeNode* leftNode = NULL; // left Child
-        CompactTreeNode* rightNode = NULL; // right Child
-        static int16_t size; // static size to numerate internal nodes
-
-        /*
-            Default constructor
-        */
-        CompactTreeNode(CompactTreeNode* leftNode, CompactTreeNode* rightNode, myByte value, myByte offValue): leftNode(leftNode),
-        rightNode(rightNode), value(value), offValue(offValue){}
-
-        /*
-            For debug usage
-        */
-        void printInOrder() {
-            if (leftNode != NULL) (*leftNode).printInOrder();
-            cout << "(" + to_string(value) + "," +to_string(offValue) + ") ";
-            if (rightNode != NULL) (*rightNode).printInOrder();
-        }
-        /*
-            For debug usage
-        */
-        void printPreOrder() {
-            cout << "(" + to_string(value) + "," +to_string(offValue) + ") ";
-            if (leftNode != NULL) (*leftNode).printPreOrder();
-            if (rightNode != NULL) (*rightNode).printPreOrder();
-        }
-
-        /*
-            Saves the size, and value-off Value pair for each node in order and in pre order        
-        */
-        // void save(ofstream& ofs) {
-        //     ofs.write((char*)&size, sizeof(size));
-        //     saveInOrder(ofs);
-        //     savePreOrder(ofs);
-        //     size = 0; // reset to encode another file
-        // }
-        
-        // private:
-        //     /*
-        //         Save tree nodes in in-order in the end of the output file
-        //     */
-        //     void saveInOrder(ofstream& ofs) {
-        //         if (leftNode != NULL) (*leftNode).saveInOrder(ofs);
-        //         ofs.write((char*)&this->value, sizeof(this->value));
-        //         ofs.write((char*)&this->offValue, sizeof(this->offValue));
-        //         if (rightNode != NULL) (*rightNode).saveInOrder(ofs);
-        //     }
-        //     /*
-        //         Save tree nodes in pre-order in the end of the output file
-        //     */
-        //     void savePreOrder(ofstream& ofs) {
-        //         ofs.write((char*)&this->value, sizeof(this->value));
-        //         ofs.write((char*)&this->offValue, sizeof(this->offValue));
-        //         if (leftNode != NULL) (*leftNode).savePreOrder(ofs);
-        //         if (rightNode != NULL) (*rightNode).savePreOrder(ofs);
-        //     }
-
-};
-int16_t CompactTreeNode::size = 0;
 
 /*
     Used tu build trees from original files and create Compacted Tree
@@ -174,21 +106,6 @@ class HuffmanTreeNode{
         void refresh(){ // reset to encode another file
             noLeafNodes = 0; 
             size = 0;
-        }
-        
-        CompactTreeNode* getCompact(){
-            CompactTreeNode* compactLeft = NULL;
-            CompactTreeNode* compactRight = NULL;
-            if(leftNode != NULL){
-                compactLeft = leftNode->getCompact();
-            }
-            if(rightNode != NULL){
-                compactRight = rightNode->getCompact();
-            }
-            CompactTreeNode* result = NULL;
-            result = new CompactTreeNode(compactLeft, compactRight,this->value, this->offValue);
-            result->size++;
-            return result;
         }
     private: 
         /*
@@ -438,18 +355,18 @@ int main(){
     encodeBytes(outputFile, "lena_ascii.pgm", table);
     cout << "lena image average huffman code length: " + getAverageLength(table, fullTree.frequencies) + "\n";
 
-    // // encode baboon
-    // ifstream inputFile2("baboon_ascii.pgm", ios::in | ios::binary);
-    // if (!inputFile2.is_open()) throw runtime_error("Error opening file");
-    // HuffmanTreeNode fullTree2(inputFile2);
-    // CompactTreeNode* compactTree2 = fullTree2.getCompact();
-    // inputFile2.close();
-    // ofstream outputFile2("baboon_ascii.huff", ios::out | ios::binary);
-    // if (!outputFile2.is_open()) throw runtime_error("Error opening file");
-    // compactTree2->save(outputFile2);
-    // map<myByte,string> table2 = byteToStringTable(compactTree2);
-    // encodeBytes(outputFile2, "baboon_ascii.pgm", table2);
-    // cout << "baboon image average huffman code length: " + getAverageLength(table2, fullTree2.frequencies) + "\n";
+    // encode baboon
+    ifstream inputFile2("baboon_ascii.pgm", ios::in | ios::binary);
+    if (!inputFile2.is_open()) throw runtime_error("Error opening file");
+    HuffmanTreeNode fullTree2(inputFile2);
+    inputFile2.close();
+    ofstream outputFile2("baboon_ascii.huff", ios::out | ios::binary);
+    if (!outputFile2.is_open()) throw runtime_error("Error opening file");
+    map<myByte,string> table2 = byteToStringTable(&fullTree2);
+    map<string, myByte> invertedTable2 = invertTable(table2);
+    saveInvertedTable(outputFile2, invertedTable2);
+    encodeBytes(outputFile2, "baboon_ascii.pgm", table2);
+    cout << "baboon image average huffman code length: " + getAverageLength(table2, fullTree2.frequencies) + "\n";
 
     return 0;
 }
