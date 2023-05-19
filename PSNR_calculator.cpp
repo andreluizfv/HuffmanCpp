@@ -21,7 +21,7 @@ double meanSquareError(string path1, string path2){
     }
     inputFile1.close();
     inputFile2.close();
-     cout<<"total bytes in mse: " + to_string(totalBytes) + "\n";
+     cout<<"total bytes in mse: " + to_string(totalBytes - 1) + "\n";
     return (result/(long double) totalBytes);
 }
 
